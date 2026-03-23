@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stat Analyzer v3 - 野球成績ポジティブ評価</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+        }
+        .level-circle {
+            box-shadow: 0 0 30px rgba(34, 211, 238, 0.3);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8 text-slate-100 flex justify-center items-start">
+
+    <div class="w-full max-w-xl bg-slate-800 rounded-[2rem] shadow-2xl overflow-hidden border border-slate-700">
+        
+        <!-- Top Banner -->
+        <div class="bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-500 p-6">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="activity" class="w-6 h-6 text-cyan-200"></i>
+                    <h1 class="text-xl font-black italic tracking-tighter uppercase">Stat Analyzer v3</h1>
+                </div>
+                <!-- Mode Switcher -->
+                <div class="flex items-center gap-2 bg-black/30 p-1 rounded-full px-3 backdrop-blur-sm">
+                    <span id="label-logic" class="text-[9px] font-black text-white">LOGIC</span>
+                    <button id="ai-toggle" class="relative inline-flex h-5 w-9 items-center rounded-full transition-colors bg-slate-600">
+                        <span id="toggle-dot" class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform translate-x-1"></span>
+                    </button>
+                    <span id="label-ai" class="text-[9px] font-black text-white/30">AI</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6 md:p-8 space-y-6">
+            <!-- Input Fields -->
+            <div class="space-y-4 text-left">
+                <div>
+                    <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Player Name</label>
+                    <input id="input-name" type="text" class="w-full bg-slate-700/50 border border-slate-600 rounded-xl px-4 py-3 outline-none focus:border-cyan-400 transition-colors font-bold text-lg text-white" placeholder="選手名">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-700/30 p-3 rounded-xl border border-slate-600 focus-within:border-cyan-500 transition-colors">
+                        <label class="block text-[9px] font-black text-slate-500 uppercase mb-1">AVG / 打率</label>
+                        <input id="input-avg" type="number" step="0.001" value="0.250" class="w-full bg-transparent text-white font-black text-xl outline-none">
+                    </div>
+                    <div class="bg-slate-700/30 p-3 rounded-xl border border-slate-600 focus-within:border-cyan-500 transition-colors">
+                        <label class="block text-[9px] font-black text-slate-500 uppercase mb-1">G / 試合数</label>
+                        <input id="input-games" type="number" value="100" class="w-full bg-transparent text-white font-black text-xl outline-none">
+                    </div>
+                    <div class="bg-slate-700/30 p-3 rounded-xl border border-slate-600 focus-within:border-cyan-500 transition-colors">
+                        <label class="block text-[9px] font-black text-slate-500 uppercase mb-1">OBP / 出塁率</label>
+                        <input id="input-obp" type="number" step="0.001" value="0.320" class="w-full bg-transparent text-white font-black text-xl outline-none">
+                    </div>
+                    <div class="bg-slate-700/30 p-3 rounded-xl border border-slate-600 focus-within:border-cyan-500 transition-colors">
+                        <label class="block text-[9px] font-black text-slate-500 uppercase mb-1">SLG / 長打率</label>
+                        <input id="input-slg" type="number" step="0.001" value="0.400" class="w-full bg-transparent text-white font-black text-xl outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <button id="run-btn" class="w-full py-4 rounded-xl font-black text-white shadow-lg transition-all flex items-center justify-center gap-3 text-lg bg-cyan-500 hover:bg-cyan-400 active:scale-95">
+                <i data-lucide="zap" class="w-5 h-5 fill-current text-slate-200" id="btn-icon"></i>
+                <span id="btn-text">レベルを算出</span>
+            </button>
+
+            <!-- Results Area -->
+            <div id="result-container" class="hidden space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <!-- Level Circle -->
+                <div class="flex justify-center">
+                    <div class="relative w-32 h-32 flex items-center justify-center">
+                        <div class="absolute inset-0 bg-cyan-500/20 blur-2xl animate-pulse"></div>
+                        <div class="z-10 bg-slate-800 border-4 border-cyan-400 rounded-full w-full h-full flex flex-col items-center justify-center level-circle">
+                            <span class="text-[10px] font-black text-cyan-400 uppercase tracking-tighter leading-none">Level</span>
+                            <span id="display-level" class="text-5xl font-black italic text-white leading-none">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Feedback Box -->
+                <div class="bg-slate-700/30 border border-slate-600 rounded-2xl p-6 relative group overflow-hidden">
+                    <div class="flex items-center gap-2 mb-3">
+                        <i id="feedback-icon" data-lucide="shield-check" class="w-4 h-4 text-slate-400"></i>
+                        <span id="feedback-label" class="text-[10px] font-black uppercase tracking-widest text-slate-400">Analysis Report</span>
+                    </div>
+                    <p id="display-evaluation" class="text-slate-200 text-sm leading-relaxed font-bold whitespace-pre-wrap text-left border-l-4 border-slate-200 pl-4 py-1">
+                        ここに評価が表示されます。
+                    </p>
+                </div>
+            </div>
+
+            <!-- Error Box -->
+            <div id="error-box" class="hidden bg-red-500/10 border border-red-500/20 p-3 rounded-lg flex items-center gap-2 text-left">
+                <i data-lucide="alert-circle" class="w-4 h-4 text-red-400 shrink-0"></i>
+                <span id="error-text" class="text-[10px] font-bold text-red-300 uppercase tracking-tight leading-none"></span>
+            </div>
+        </div>
+
+        <div class="p-4 bg-slate-900/50 text-center border-t border-slate-700">
+            <p id="footer-text" class="text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                Local Engine v3
+            </p>
+        </div>
+    </div>
+
+    <script>
+        // Constants & State
+        const apiKey = "AIzaSyAsWChBM9Gjg5kfcpg-UjwRScNIww6xQKw";
+        let useAI = false;
+
+        // Elements
+        const aiToggle = document.getElementById('ai-toggle');
+        const toggleDot = document.getElementById('toggle-dot');
+        const labelLogic = document.getElementById('label-logic');
+        const labelAi = document.getElementById('label-ai');
+        const runBtn = document.getElementById('run-btn');
+        const btnText = document.getElementById('btn-text');
+        const resultContainer = document.getElementById('result-container');
+        const displayLevel = document.getElementById('display-level');
+        const displayEvaluation = document.getElementById('display-evaluation');
+        const feedbackIcon = document.getElementById('feedback-icon');
+        const feedbackLabel = document.getElementById('feedback-label');
+        const footerText = document.getElementById('footer-text');
+        const errorBox = document.getElementById('error-box');
+        const errorText = document.getElementById('error-text');
+
+        // Initialize Lucide Icons
+        lucide.createIcons();
+
+        // Toggle Logic
+        aiToggle.addEventListener('click', () => {
+            useAI = !useAI;
+            if (useAI) {
+                aiToggle.classList.replace('bg-slate-600', 'bg-cyan-400');
+                toggleDot.classList.replace('translate-x-1', 'translate-x-5');
+                labelLogic.classList.replace('text-white', 'text-white/30');
+                labelAi.classList.replace('text-white/30', 'text-white');
+                btnText.innerText = "AI診断を開始";
+                document.getElementById('btn-icon').classList.replace('text-slate-200', 'text-white');
+            } else {
+                aiToggle.classList.replace('bg-cyan-400', 'bg-slate-600');
+                toggleDot.classList.replace('translate-x-5', 'translate-x-1');
+                labelLogic.classList.replace('text-white/30', 'text-white');
+                labelAi.classList.replace('text-white', 'text-white/30');
+                btnText.innerText = "レベルを算出";
+                document.getElementById('btn-icon').classList.replace('text-white', 'text-slate-200');
+            }
+        });
+
+        const calculateLevel = () => {
+            const avg = parseFloat(document.getElementById('input-avg').value) || 0;
+            const obp = parseFloat(document.getElementById('input-obp').value) || 0;
+            const slg = parseFloat(document.getElementById('input-slg').value) || 0;
+            const games = parseInt(document.getElementById('input-games').value) || 0;
+            
+            const avgScore = (avg / 0.450) * 40; 
+            const opsScore = ((obp + slg) / 1.200) * 40;
+            const expScore = (games / 162) * 20;
+
+            const totalScore = avgScore + opsScore + expScore;
+            return Math.min(100, Math.max(1, Math.round(totalScore)));
+        };
+
+        const runAnalysis = async () => {
+            errorBox.classList.add('hidden');
+            const name = document.getElementById('input-name').value || '期待の星';
+            const avg = document.getElementById('input-avg').value;
+            const games = document.getElementById('input-games').value;
+            const obp = document.getElementById('input-obp').value;
+            const slg = document.getElementById('input-slg').value;
+
+            const level = calculateLevel();
+            displayLevel.innerText = level;
+            resultContainer.classList.remove('hidden');
+
+            if (!useAI) {
+                displayEvaluation.innerText = `【システム解析】数値データに基づき、あなたの現在のパフォーマンスを Lv.${level} と算出しました。AI診断をONにすると、専属コーチによる詳細なアドバイスが生成されます。`;
+                feedbackIcon.setAttribute('data-lucide', 'shield-check');
+                feedbackLabel.innerText = "Analysis Report";
+                footerText.innerText = "Local Engine v3";
+                lucide.createIcons();
+                return;
+            }
+
+            // AI Mode
+            runBtn.disabled = true;
+            const originalBtnText = btnText.innerText;
+            btnText.innerText = "Analyzing...";
+            
+            const MODEL_ID = "gemini-3-flash-preview";
+            const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_ID}:generateContent?key=${apiKey}`;
+
+            const systemInstruction = `あなたは世界一熱い野球の専属コーチです。選手の成績から「真の価値」を見抜きます。
+            以下の3点を日本語で出力してください：
+            1. 【魂の称賛】: そのスタッツの凄さを熱く語る。
+            2. 【レベルの証明】: 「君の現在のレベルは Lv.${level} だ！」と断言する。
+            3. 【更なる高みへ】: 具体的なアドバイスを1つ。
+            文字数は180文字程度。常にポジティブで、否定的な表現は一切禁止です。`;
+
+            const payload = {
+                contents: [{
+                    parts: [{
+                        text: `選手名: ${name} / 成績: AVG ${avg}, OBP ${obp}, SLG ${slg}, G ${games}`
+                    }]
+                }],
+                systemInstruction: {
+                    parts: [{ text: systemInstruction }]
+                }
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || 'Connection error');
+                }
+
+                const data = await response.json();
+                const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                displayEvaluation.innerText = text || "AIからの応答が空でした。";
+                feedbackIcon.setAttribute('data-lucide', 'message-square');
+                feedbackLabel.innerText = "Coach Feedback";
+                footerText.innerText = "Model: gemini-3-flash-preview";
+                lucide.createIcons();
+
+            } catch (err) {
+                errorBox.classList.remove('hidden');
+                errorText.innerText = `AI接続エラー: ${err.message}`;
+                displayEvaluation.innerText = `【オフライン判定】Lv.${level}\n(AIコーチが不在のため、数値解析のみ行いました。少し時間をおいてからAIをONでお試しください)`;
+            } finally {
+                runBtn.disabled = false;
+                btnText.innerText = originalBtnText;
+            }
+        };
+
+        runBtn.addEventListener('click', runAnalysis);
+    </script>
+</body>
+</html>
